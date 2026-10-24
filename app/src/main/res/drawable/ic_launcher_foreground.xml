@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Emblème PETRA officiel, réduit dans la zone sûre (66 dp sur 108) de l'icône adaptative. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/petra_emblem"
+    android:inset="24dp" />

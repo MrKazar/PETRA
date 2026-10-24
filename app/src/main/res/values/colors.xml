@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette PETRA (charte V2.0) -->
+    <color name="petra_olive">#FF4A543A</color>
+    <color name="petra_olive_light">#FF68764D</color>
+    <color name="petra_khaki">#FFB7A98A</color>
+    <color name="petra_black">#FF0D0F0E</color>
+    <color name="petra_surface">#FF171A17</color>
+    <color name="petra_surface_alt">#FF20241F</color>
+    <color name="petra_border">#FF34382F</color>
+    <color name="petra_text">#FFE8E7DE</color>
+    <color name="petra_text_muted">#FFA7A99D</color>
+    <color name="petra_success">#FF9BAF76</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
