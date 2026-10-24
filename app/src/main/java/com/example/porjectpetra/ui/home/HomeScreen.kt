@@ -1,5 +1,7 @@
 package com.example.porjectpetra.ui.home
 
+import com.example.porjectpetra.ui.update.UpdateBanner
+import com.example.porjectpetra.update.UpdateManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.outlined.FitnessCenter
 import com.example.porjectpetra.ui.components.PetraActionCard
@@ -68,7 +70,8 @@ fun HomeScreen(
     onStartWorkout: (programId: Long?) -> Unit,
     onOpenSport: () -> Unit,
     modifier: Modifier = Modifier,
-    onOpenPlan: () -> Unit = {}
+    onOpenPlan: () -> Unit = {},
+    updateManager: UpdateManager? = null
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var editorOpen by rememberSaveable { mutableStateOf(false) }
@@ -110,6 +113,10 @@ fun HomeScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = PetraTextMuted
                 )
+            }
+
+            if (updateManager != null) {
+                item { UpdateBanner(updateManager) }
             }
 
             item { DailyProgressCard(state) }

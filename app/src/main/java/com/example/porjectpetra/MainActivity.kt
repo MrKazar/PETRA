@@ -23,6 +23,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         LiveWorkout.appInForeground.value = true
+        // Nouvelle version publiée ? (une vérification par lancement, silencieuse hors connexion)
+        app.updateManager.checkOnLaunch()
     }
 
     override fun onStop() {

@@ -1,5 +1,7 @@
 package com.example.porjectpetra.ui.profile
 
+import com.example.porjectpetra.ui.update.UpdateSection
+import com.example.porjectpetra.update.UpdateManager
 import androidx.compose.ui.graphics.Color
 import com.example.porjectpetra.ui.components.PetraLogo
 import com.example.porjectpetra.ui.components.PetraWordmark
@@ -60,7 +62,7 @@ import com.example.porjectpetra.ui.theme.PetraTextMuted
 private enum class ClearTarget { TASKS, WORKOUTS }
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel, modifier: Modifier = Modifier) {
+fun ProfileScreen(viewModel: ProfileViewModel, modifier: Modifier = Modifier, updateManager: UpdateManager? = null) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -152,6 +154,8 @@ fun ProfileScreen(viewModel: ProfileViewModel, modifier: Modifier = Modifier) {
                 Spacer(Modifier.height(4.dp))
                 ComingSoonNote("rappels configurables et désactivables par routine ou par tâche.")
             }
+
+            if (updateManager != null) UpdateSection(updateManager)
 
             PetraCard {
                 SectionHeader("Données")

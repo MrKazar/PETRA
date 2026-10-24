@@ -1,9 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
+
+// Clé de signature des versions publiées (hors dépôt git) : voir keystore.properties.example.
+// La même clé doit signer toutes les versions, sinon le téléphone refuse la mise à jour.
+val keystoreProperties = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val hasReleaseKey = keystoreProperties.getProperty("storeFile") != null
+
+// Version de l'application : modifiée par scripts/publish-release.ps1 à chaque version publiée.
+val petraVersionCode = (findProperty("petra.versionCode") as String).toInt()
+val petraVersionName = findProperty("petra.versionName") as String
+// Dépôt GitHub dont les « releases » servent de canal de mise à jour (propriétaire/nom).
+val petraUpdateRepo = findProperty("petra.updateRepo") as String
 
 android {
     namespace = "com.example.porjectpetra"
@@ -15,17 +30,31 @@ android {
         applicationId = "com.example.porjectpetra"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = petraVersionCode
+        versionName = petraVersionName
+        buildConfigField("String", "UPDATE_REPO", "\"$petraUpdateRepo\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseKey) signingConfig = signingConfigs.getByName("release")
+            // Optimisation R8 désactivée : l'optimisation partielle (packageScope androidx/kotlin) fait planter
+            // l'APK au démarrage (IllegalAccessError dans kotlin.*). Fiabilité d'abord ; à réactiver avec des tests.
             optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+                enable = false
             }
         }
     }
@@ -35,6 +64,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

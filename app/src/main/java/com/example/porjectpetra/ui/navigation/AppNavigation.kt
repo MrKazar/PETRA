@@ -135,7 +135,8 @@ fun AppNavigation(
                         onOpenRoutines = { backStack.openTab(PetraTab.ROUTINES) },
                         onStartWorkout = { programId -> backStack.openTab(PetraTab.SPORT, ActiveWorkoutKey(programId)) },
                         onOpenSport = { backStack.openTab(PetraTab.SPORT) },
-                        onOpenPlan = { backStack.openTab(PetraTab.SPORT, PlanKey) }
+                        onOpenPlan = { backStack.openTab(PetraTab.SPORT, PlanKey) },
+                        updateManager = app.updateManager
                     )
                 }
                 entry<RoutinesKey> {
@@ -203,7 +204,7 @@ fun AppNavigation(
                 }
                 entry<ProfileKey> {
                     val vm: ProfileViewModel = viewModel(factory = ProfileViewModel.provideFactory(app))
-                    ProfileScreen(viewModel = vm)
+                    ProfileScreen(viewModel = vm, updateManager = app.updateManager)
                 }
             }
         )

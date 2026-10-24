@@ -15,3 +15,9 @@
 local.properties
 .kotlin
 graphify-out/
+# Clé de signature des versions publiées : ne jamais la mettre dans git
+keystore.properties
+*.jks
+*.keystore
+# APK publiés localement
+/releases
