@@ -24,7 +24,10 @@ param(
     [switch]$DryRun
 )
 
-$ErrorActionPreference = "Stop"
+# « Continue » : Windows PowerShell 5.1 transforme les messages d'avertissement des outils (gradle, git)
+# en erreurs fatales sous « Stop ». On vérifie plutôt le code de sortie de chaque commande.
+$ErrorActionPreference = "Continue"
+function Check($what) { if ($LASTEXITCODE -ne 0) { Fail "$what a échoué (code $LASTEXITCODE)." } }
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
@@ -76,10 +79,10 @@ if ($DryRun) {
 
 $tag = "v$Version"
 git add gradle.properties
-git commit -q -m "Version $Version"
-git tag -a $tag -m "PETRA $Version"
-git push -q origin HEAD
-git push -q origin $tag
+git commit -q -m "Version $Version"; Check "git commit"
+git tag -a $tag -m "PETRA $Version"; Check "git tag"
+git push -q origin HEAD; Check "git push"
+git push -q origin $tag; Check "git push du tag"
 
 if (-not $Notes) { $Notes = "PETRA $Version" }
 
@@ -91,6 +94,7 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
     if (-not $token) { Fail "ni « gh » ni GITHUB_TOKEN : la version est taguée et poussée, mais la release n'est pas créée. Crée-la à la main sur https://github.com/$repo/releases/new?tag=$tag avec $apk." }
     $headers = @{ Authorization = "Bearer $token"; Accept = "application/vnd.github+json"; "User-Agent" = "PETRA-release" }
     $body = @{ tag_name = $tag; name = "PETRA $Version"; body = $Notes; draft = $false; prerelease = $false } | ConvertTo-Json
+    $ErrorActionPreference = "Stop"
     $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$repo/releases" -Headers $headers -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -ContentType "application/json; charset=utf-8"
     $uploadUrl = "https://uploads.github.com/repos/$repo/releases/$($release.id)/assets?name=PETRA-$Version.apk"
     Invoke-RestMethod -Method Post -Uri $uploadUrl -Headers $headers -InFile $apk -ContentType "application/vnd.android.package-archive" | Out-Null
