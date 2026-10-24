@@ -627,6 +627,9 @@ fun ExerciseCardPreview() {
 
 /** Ex. « Chauffe 12 · Travail 2 × 6 · Hypertrophie 10 rép. » */
 private fun cycleSummary(exercise: CatalogExercise, workLoadKg: Double): String {
+    exercise.cardio?.let { c ->
+        return "Chauffe ${c.warmupMinutes} min · Effort ${c.effortMinutes} min · Retour au calme ${c.cooldownMinutes} min"
+    }
     val sets = ExerciseCycle.build(exercise, workLoadKg)
     val unit = if (exercise.work.isSeconds) "s" else "rép."
     val side = if (exercise.isUnilateral) " / côté" else ""

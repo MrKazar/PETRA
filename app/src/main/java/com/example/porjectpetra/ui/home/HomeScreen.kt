@@ -67,7 +67,8 @@ fun HomeScreen(
     onOpenRoutines: () -> Unit,
     onStartWorkout: (programId: Long?) -> Unit,
     onOpenSport: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenPlan: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var editorOpen by rememberSaveable { mutableStateOf(false) }
@@ -172,7 +173,7 @@ fun HomeScreen(
                 }
             }
 
-            item { WorkoutCard(state, onStartWorkout = onStartWorkout, onOpenSport = onOpenSport) }
+            item { WorkoutCard(state, onStartWorkout = onStartWorkout, onOpenSport = onOpenSport, onOpenPlan = onOpenPlan) }
             item { WeekCard(state) }
         }
     }
@@ -247,10 +248,32 @@ private fun DailyProgressCard(state: HomeUiState) {
 }
 
 @Composable
-private fun WorkoutCard(state: HomeUiState, onStartWorkout: (Long?) -> Unit, onOpenSport: () -> Unit) {
-    SectionHeader("Objectif sportif")
+private fun WorkoutCard(state: HomeUiState, onStartWorkout: (Long?) -> Unit, onOpenSport: () -> Unit, onOpenPlan: () -> Unit) {
+    SectionHeader("Objectif sportif", trailing = { TextButton(onClick = onOpenPlan) { Text("PLANNING") } })
+    val todo = state.todayPlanned.firstOrNull { !it.isDone }
+    val next = state.nextPlanned
     val suggestion = state.suggestedWorkout
-    if (suggestion != null) {
+    if (todo != null) {
+        // Séance prévue aujourd'hui par le planning
+        PetraActionCard(
+            icon = Icons.Outlined.FitnessCenter,
+            title = todo.name,
+            subtitle = listOfNotNull("Prévue aujourd'hui", todo.timeMinutes?.let { PetraDates.formatMinutes(it) }, todo.category)
+                .joinToString(" · "),
+            onClick = onOpenPlan,
+            buttonText = "Démarrer",
+            onButtonClick = { onStartWorkout(todo.programId) }
+        )
+    } else if (state.todayPlanned.isNotEmpty() || next != null) {
+        PetraActionCard(
+            icon = Icons.Outlined.FitnessCenter,
+            title = if (state.todayPlanned.isNotEmpty()) "Séance du jour faite" else "Repos aujourd'hui",
+            subtitle = next?.let {
+                "Prochaine : ${PetraDates.formatLongDate(it.epochDay)} · ${it.name}" + (it.timeMinutes?.let { t -> " · ${PetraDates.formatMinutes(t)}" } ?: "")
+            } ?: "Rien d'autre de prévu sur les 2 semaines",
+            onClick = onOpenPlan
+        )
+    } else if (suggestion != null) {
         PetraActionCard(
             icon = Icons.Outlined.FitnessCenter,
             title = suggestion.name,
@@ -298,8 +321,8 @@ private fun WeekCard(state: HomeUiState) {
                 modifier = Modifier.weight(1f)
             )
             StatTile(
-                value = "${state.weekSessions} / ${state.weeklySessionGoal}",
-                label = "Séances effectuées",
+                value = "${state.weekSessions} / ${state.plannedThisWeek ?: state.weeklySessionGoal}",
+                label = if (state.plannedThisWeek != null) "Séances (planning)" else "Séances effectuées",
                 modifier = Modifier.weight(1f)
             )
         }

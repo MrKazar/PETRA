@@ -1,5 +1,8 @@
 package com.example.porjectpetra.ui.workout
 
+import com.example.porjectpetra.workout.LiveWorkout
+import com.example.porjectpetra.workout.LiveWorkoutCommand
+import com.example.porjectpetra.workout.LiveWorkoutState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -84,7 +87,9 @@ data class ActiveWorkoutUiState(
     val showAddExerciseDialog: Boolean = false,
     val isSessionSaved: Boolean = false,
     val isSessionCancelled: Boolean = false,
-    val userMessage: String? = null
+    val userMessage: String? = null,
+    /** Nombre de repos arrivés à zéro (bip et vibration du widget). */
+    val restCompletedCount: Int = 0
 ) {
     val completedSetsCount: Int
         get() = exercises.sumOf { ex -> ex.sets.count { it.isCompleted } }
@@ -138,6 +143,19 @@ class ActiveWorkoutViewModel(
 
     init {
         startStopwatch()
+        // Séance visible hors de l'application (widget flottant + notification)
+        viewModelScope.launch {
+            _uiState.collect { LiveWorkout.publish(it.toLiveState()) }
+        }
+        viewModelScope.launch {
+            LiveWorkout.commands.collect { command ->
+                when (command) {
+                    LiveWorkoutCommand.COMPLETE_CURRENT_SET -> completeCurrentSet()
+                    LiveWorkoutCommand.SKIP_REST -> skipRestTimer()
+                    LiveWorkoutCommand.ADD_REST_15S -> addRestTime(15)
+                }
+            }
+        }
     }
 
     fun startSessionForProgram(programId: Long?) {
@@ -377,7 +395,8 @@ class ActiveWorkoutViewModel(
                             state.copy(
                                 restTimerRemainingSeconds = 0,
                                 isRestTimerActive = false,
-                                userMessage = "Repos terminé !"
+                                userMessage = "Repos terminé !",
+                                restCompletedCount = state.restCompletedCount + 1
                             )
                         } else {
                             state.copy(restTimerRemainingSeconds = remaining)
@@ -394,6 +413,23 @@ class ActiveWorkoutViewModel(
 
     fun resumeRestTimer() {
         _uiState.update { it.copy(isRestTimerPaused = false) }
+    }
+
+    /** Valide la prochaine série non faite (bouton « Série faite » du widget). */
+    fun completeCurrentSet() {
+        val state = _uiState.value
+        state.exercises.forEachIndexed { exIdx, exercise ->
+            val setIdx = exercise.sets.indexOfFirst { !it.isCompleted }
+            if (setIdx >= 0) {
+                toggleSetCompleted(exIdx, setIdx)
+                return
+            }
+        }
+    }
+
+    override fun onCleared() {
+        LiveWorkout.publish(null)
+        super.onCleared()
     }
 
     fun addRestTime(additionalSeconds: Int = 30) {
@@ -524,4 +560,35 @@ class ActiveWorkoutViewModel(
             }
         }
     }
+}
+
+/** Résumé de la séance pour le widget : la prochaine série à faire, le repos en cours, la progression. */
+fun ActiveWorkoutUiState.toLiveState(): LiveWorkoutState? {
+    if (isSessionSaved || isSessionCancelled) return null
+    val sets = exercises.flatMap { ex -> ex.sets.map { ex to it } }
+    val current = sets.firstOrNull { !it.second.isCompleted }
+    return LiveWorkoutState(
+        title = workoutTitle,
+        elapsed = formattedElapsedTime,
+        exerciseName = current?.first?.name.orEmpty(),
+        setLabel = current?.let { (ex, set) -> set.phaseLabel.ifEmpty { "Série ${set.setNumber}/${ex.sets.size}" } }.orEmpty(),
+        setDetail = current?.let { (ex, set) -> describeSet(ex, set) }.orEmpty(),
+        doneCount = sets.count { it.second.isCompleted },
+        totalCount = sets.size,
+        isResting = isRestTimerActive,
+        restRemainingSeconds = restTimerRemainingSeconds,
+        restTotalSeconds = restTimerTotalSeconds,
+        restCompletedCount = restCompletedCount,
+        isFinished = sets.isNotEmpty() && current == null
+    )
+}
+
+private fun describeSet(exercise: ActiveExerciseUiState, set: ActiveSetUiState): String {
+    val reps = when {
+        exercise.isCycle -> ExerciseCycle.formatReps(set.targetReps, set.isSeconds, exercise.isUnilateral)
+        exercise.isCardio -> set.actualDurationMins.takeIf { it.isNotBlank() }?.let { "$it min" } ?: ""
+        else -> "${set.actualReps.ifBlank { set.targetReps.toString() }} rép."
+    }
+    val weight = set.actualWeightKg.toDoubleOrNull()?.takeIf { it > 0 }?.let { "${ExerciseCycle.formatKg(it)} kg" }
+    return listOfNotNull(reps.ifBlank { null }, weight).joinToString(" · ")
 }

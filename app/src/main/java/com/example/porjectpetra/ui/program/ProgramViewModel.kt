@@ -221,7 +221,7 @@ class ProgramViewModel(
                 name = exercise.name,
                 muscleGroup = exercise.muscleGroup,
                 catalogId = exercise.id,
-                targetSets = ExerciseCycle.TOTAL_SETS,
+                targetSets = ExerciseCycle.build(exercise, workLoadKg).size,
                 targetReps = exercise.work.reps,
                 targetWeightKg = if (exercise.usesLoad) workLoadKg.coerceAtLeast(0.0) else 0.0,
                 targetDurationSeconds = 0,

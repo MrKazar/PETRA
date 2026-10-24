@@ -1,5 +1,7 @@
 package com.example.porjectpetra.ui.navigation
 
+import com.example.porjectpetra.ui.plan.PlanViewModel
+import com.example.porjectpetra.ui.plan.PlanScreen
 import androidx.compose.ui.graphics.Color
 import com.example.porjectpetra.ui.components.PetraBackground
 import androidx.activity.compose.BackHandler
@@ -72,6 +74,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SportKey : NavKey
 @Serializable data class ProgramDetailKey(val programId: Long) : NavKey
 @Serializable data object WorkoutHistoryKey : NavKey
+@Serializable data object PlanKey : NavKey
 @Serializable data class ActiveWorkoutKey(val programId: Long? = null) : NavKey
 @Serializable data object ProfileKey : NavKey
 
@@ -84,7 +87,7 @@ enum class PetraTab(val label: String, val icon: ImageVector, val root: NavKey) 
 
 private fun tabOf(key: NavKey?): PetraTab = when (key) {
     is RoutinesKey, is RoutineDetailKey -> PetraTab.ROUTINES
-    is SportKey, is ProgramDetailKey, is WorkoutHistoryKey, is ActiveWorkoutKey -> PetraTab.SPORT
+    is SportKey, is ProgramDetailKey, is WorkoutHistoryKey, is PlanKey, is ActiveWorkoutKey -> PetraTab.SPORT
     is ProfileKey -> PetraTab.PROFILE
     else -> PetraTab.HOME
 }
@@ -131,7 +134,8 @@ fun AppNavigation(
                         onOpenRoutine = { id -> backStack.openTab(PetraTab.ROUTINES, RoutineDetailKey(id)) },
                         onOpenRoutines = { backStack.openTab(PetraTab.ROUTINES) },
                         onStartWorkout = { programId -> backStack.openTab(PetraTab.SPORT, ActiveWorkoutKey(programId)) },
-                        onOpenSport = { backStack.openTab(PetraTab.SPORT) }
+                        onOpenSport = { backStack.openTab(PetraTab.SPORT) },
+                        onOpenPlan = { backStack.openTab(PetraTab.SPORT, PlanKey) }
                     )
                 }
                 entry<RoutinesKey> {
@@ -155,7 +159,17 @@ fun AppNavigation(
                         viewModel = programViewModel,
                         onNavigateToDetail = { id -> backStack.add(ProgramDetailKey(id)) },
                         onStartWorkout = { programId -> backStack.add(ActiveWorkoutKey(programId)) },
-                        onOpenHistory = { backStack.add(WorkoutHistoryKey) }
+                        onOpenHistory = { backStack.add(WorkoutHistoryKey) },
+                        onOpenPlan = { backStack.add(PlanKey) }
+                    )
+                }
+                entry<PlanKey> {
+                    val vm: PlanViewModel = viewModel(factory = PlanViewModel.provideFactory(app))
+                    PlanScreen(
+                        viewModel = vm,
+                        onBack = { backStack.popIfTop(PlanKey) },
+                        onStartWorkout = { programId -> backStack.add(ActiveWorkoutKey(programId)) },
+                        onCreateProgram = { backStack.openTab(PetraTab.SPORT) }
                     )
                 }
                 entry<ProgramDetailKey> { key ->

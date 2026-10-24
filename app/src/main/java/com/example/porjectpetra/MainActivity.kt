@@ -1,5 +1,6 @@
 package com.example.porjectpetra
 
+import com.example.porjectpetra.workout.LiveWorkout
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +18,17 @@ class MainActivity : ComponentActivity() {
 
     private val programViewModel: ProgramViewModel by viewModels {
         ProgramViewModel.provideFactory(app.programRepository, app.exerciseCatalog)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        LiveWorkout.appInForeground.value = true
+    }
+
+    override fun onStop() {
+        // PETRA passe en arrière-plan : le widget de séance peut s'afficher par-dessus les autres applis.
+        LiveWorkout.appInForeground.value = false
+        super.onStop()
     }
 
     override fun onResume() {

@@ -18,8 +18,8 @@ class ExerciseCatalogTest {
 
     @Test
     fun catalog_parsesAllExercises_withUniqueIds() {
-        assertEquals(100, testCatalog.exercises.size)
-        assertEquals(100, testCatalog.exercises.map { it.id }.toSet().size)
+        assertEquals(114, testCatalog.exercises.size)
+        assertEquals(114, testCatalog.exercises.map { it.id }.toSet().size)
         assertTrue(testCatalog.exercises.all { it.warmup.reps > 0 && it.work.reps > 0 && it.hypertrophy.reps > 0 })
         assertTrue(testCatalog.exercises.all { it.work.restSeconds != null && it.hypertrophy.restSeconds != null })
     }

@@ -1,5 +1,6 @@
 package com.example.porjectpetra.ui.program
 
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.ui.graphics.Color
 import com.example.porjectpetra.data.model.SportVocabulary
 import androidx.compose.animation.AnimatedVisibility
@@ -81,7 +82,8 @@ fun ProgramListScreen(
     onNavigateToDetail: (programId: Long) -> Unit,
     onStartWorkout: (programId: Long?) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenHistory: (() -> Unit)? = null
+    onOpenHistory: (() -> Unit)? = null,
+    onOpenPlan: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val programsWithExercises by viewModel.programsWithExercises.collectAsState()
@@ -122,6 +124,11 @@ fun ProgramListScreen(
                     }
                 },
                 actions = {
+                    if (onOpenPlan != null) {
+                        IconButton(onClick = onOpenPlan) {
+                            Icon(Icons.Default.CalendarMonth, contentDescription = "Planning sur 2 semaines")
+                        }
+                    }
                     if (onOpenHistory != null) {
                         IconButton(onClick = onOpenHistory) {
                             Icon(Icons.Default.History, contentDescription = "Historique des séances")

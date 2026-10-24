@@ -7,7 +7,8 @@
     "hypertrophie": "Série orientée prise de muscle (charge modérée, reps moyennes, proche de l'échec : 1-3 reps en réserve).",
     "repos_sec": "Repos conseillé entre deux séries, en secondes.",
     "par_cote": "Si true, les reps sont à faire de chaque côté (unilatéral).",
-    "note": "Valeurs indicatives issues des recommandations courantes en musculation : à ajuster selon ton niveau, ta récupération et tes sensations."
+    "note": "Valeurs indicatives issues des recommandations courantes en musculation : à ajuster selon ton niveau, ta récupération et tes sensations.",
+    "cardio": "Exercice de cardio : échauffement, effort puis retour au calme, durées en minutes. L'intensité est indicative."
   },
   "groupes_musculaires": [
     "abdominaux",
@@ -24,7 +25,8 @@
     "pectoraux",
     "quadriceps",
     "trapezes",
-    "triceps"
+    "triceps",
+    "cardio"
   ],
   "exercices": [
     {
@@ -2785,6 +2787,230 @@
         "series": 3,
         "reps": "45-60 s",
         "repos_sec": 45
+      }
+    },
+    {
+      "id": "corde_a_sauter",
+      "nom": "Corde à sauter",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "corde",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 15,
+        "retour_calme_min": 5,
+        "intensite": "élevée",
+        "consigne": "Fractionné : 30 s rapide / 30 s tranquille, en continu."
+      }
+    },
+    {
+      "id": "marche_rapide",
+      "nom": "Marche rapide (extérieur)",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "aucun",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 30,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Allure soutenue : on peut parler, mais pas chanter."
+      }
+    },
+    {
+      "id": "marche_inclinee",
+      "nom": "Marche inclinée sur tapis",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "tapis de course",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 30,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Inclinaison 8 à 12 %, vitesse 5 à 6 km/h, sans se tenir aux barres."
+      }
+    },
+    {
+      "id": "course_exterieur",
+      "nom": "Course à pied (extérieur)",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "aucun",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 25,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Footing en aisance respiratoire."
+      }
+    },
+    {
+      "id": "course_tapis",
+      "nom": "Course sur tapis",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "tapis de course",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 20,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Allure régulière, 1 % d'inclinaison pour compenser l'absence de vent."
+      }
+    },
+    {
+      "id": "course_fractionnee",
+      "nom": "Course fractionnée",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "aucun",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 16,
+        "retour_calme_min": 5,
+        "intensite": "élevée",
+        "consigne": "8 × (1 min rapide / 1 min de récupération en trottinant)."
+      }
+    },
+    {
+      "id": "step",
+      "nom": "Step (montées de marche)",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "step",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 15,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Montées et descentes alternées sur une marche ou un step, rythme régulier."
+      }
+    },
+    {
+      "id": "escalier_machine",
+      "nom": "Escalier (stairmaster)",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "machine",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 15,
+        "retour_calme_min": 5,
+        "intensite": "élevée",
+        "consigne": "Rythme constant, buste droit, sans s'appuyer sur les poignées."
+      }
+    },
+    {
+      "id": "velo_elliptique",
+      "nom": "Vélo elliptique",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "machine",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 25,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Résistance moyenne, cadence régulière."
+      }
+    },
+    {
+      "id": "velo_appartement",
+      "nom": "Vélo d'appartement",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "machine",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 30,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Cadence 80 à 90 tours/min, résistance moyenne."
+      }
+    },
+    {
+      "id": "rameur",
+      "nom": "Rameur",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "machine",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 15,
+        "retour_calme_min": 5,
+        "intensite": "élevée",
+        "consigne": "Poussée des jambes d'abord, puis tirage des bras ; 22 à 26 coups/min."
+      }
+    },
+    {
+      "id": "air_bike",
+      "nom": "Air bike (fractionné)",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "machine",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 10,
+        "retour_calme_min": 5,
+        "intensite": "très élevée",
+        "consigne": "10 × (20 s à fond / 40 s tranquille)."
+      }
+    },
+    {
+      "id": "hiit_poids_corps",
+      "nom": "HIIT poids du corps (burpees, jumping jacks)",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "poids du corps",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 12,
+        "retour_calme_min": 5,
+        "intensite": "très élevée",
+        "consigne": "Circuit : 40 s d'effort / 20 s de repos, en enchaînant les mouvements."
+      }
+    },
+    {
+      "id": "natation",
+      "nom": "Natation",
+      "groupe_musculaire": "cardio",
+      "muscles_secondaires": [],
+      "equipement": "piscine",
+      "type": "cardio",
+      "par_cote": false,
+      "cardio": {
+        "echauffement_min": 5,
+        "effort_min": 25,
+        "retour_calme_min": 5,
+        "intensite": "modérée",
+        "consigne": "Nage libre à allure régulière, pauses courtes au bord si besoin."
       }
     }
   ]

@@ -94,6 +94,9 @@ fun CatalogExerciseDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = PetraTextMuted
                     )
+                    selected.cardio?.let { c ->
+                        Text("Intensité ${c.intensity}. ${c.instructions}", style = MaterialTheme.typography.bodyMedium)
+                    }
                     if (selected.usesLoad) {
                         OutlinedTextField(
                             value = workLoad,
@@ -104,7 +107,7 @@ fun CatalogExerciseDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
                         )
-                    } else {
+                    } else if (!selected.isCardio) {
                         Text("Exercice au poids du corps : pas de charge à saisir.", style = MaterialTheme.typography.bodySmall, color = PetraTextMuted)
                     }
                     CyclePreview(selected, workLoad.toDoubleOrNull() ?: 0.0)
@@ -202,6 +205,7 @@ fun CyclePreview(exercise: CatalogExercise, workLoadKg: Double) {
                 )
                 Text(
                     when {
+                        exercise.isCardio -> exercise.cardio?.intensity.orEmpty()
                         !exercise.usesLoad -> "PdC"
                         workLoadKg <= 0 -> "— kg"
                         else -> "${ExerciseCycle.formatKg(set.weightKg)} kg"
@@ -210,7 +214,7 @@ fun CyclePreview(exercise: CatalogExercise, workLoadKg: Double) {
                     modifier = Modifier.weight(0.9f)
                 )
                 Text(
-                    ExerciseCycle.formatRest(set.restSeconds),
+                    if (set.restSeconds > 0) ExerciseCycle.formatRest(set.restSeconds) else "—",
                     style = MaterialTheme.typography.bodySmall,
                     color = PetraTextMuted,
                     modifier = Modifier.weight(0.9f)
@@ -218,7 +222,7 @@ fun CyclePreview(exercise: CatalogExercise, workLoadKg: Double) {
             }
         }
         Spacer(Modifier.height(2.dp))
-        Text(
+        if (!exercise.isCardio) Text(
             "Chauffe à 50 % et hypertrophie à 80 % de la charge de travail, arrondies à 0,5 kg.",
             style = MaterialTheme.typography.bodySmall,
             color = PetraTextMuted

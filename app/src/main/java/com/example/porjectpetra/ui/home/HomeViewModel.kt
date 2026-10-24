@@ -1,5 +1,8 @@
 package com.example.porjectpetra.ui.home
 
+import com.example.porjectpetra.data.model.TrainingPlanner
+import com.example.porjectpetra.data.model.PlannedWorkout
+import com.example.porjectpetra.data.repository.PlanRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -41,6 +44,16 @@ data class SuggestedWorkout(
     val daysSinceLast: Long?
 )
 
+/** Séance du planning affichée sur l'accueil. */
+data class HomePlannedWorkout(
+    val epochDay: Long,
+    val programId: Long,
+    val name: String,
+    val category: String,
+    val timeMinutes: Int?,
+    val isDone: Boolean
+)
+
 data class HomeUiState(
     val isLoading: Boolean = true,
     val today: Long = PetraDates.epochDay(),
@@ -52,7 +65,13 @@ data class HomeUiState(
     val weekSessions: Int = 0,
     val weeklySessionGoal: Int = UserSettings.DEFAULT_WEEKLY_SESSION_GOAL,
     val suggestedWorkout: SuggestedWorkout? = null,
-    val hasPrograms: Boolean = false
+    val hasPrograms: Boolean = false,
+    /** Séances du planning prévues aujourd'hui. */
+    val todayPlanned: List<HomePlannedWorkout> = emptyList(),
+    /** Prochaine séance prévue après aujourd'hui (sur les 14 jours à venir). */
+    val nextPlanned: HomePlannedWorkout? = null,
+    /** Séances prévues cette semaine ; null si le planning est vide. */
+    val plannedThisWeek: Int? = null
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -61,7 +80,8 @@ class HomeViewModel(
     programRepository: ProgramRepository,
     workoutSessionRepository: WorkoutSessionRepository,
     userPreferences: UserPreferencesRepository,
-    today: StateFlow<Long>
+    today: StateFlow<Long>,
+    planRepository: PlanRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = today.flatMapLatest { day ->
@@ -73,13 +93,24 @@ class HomeViewModel(
             routineRepository.getLogsBetween(weekStart - 1, day)
         ) { routines, tasks, logs -> Triple(routines, tasks, logs) }
 
+        val planFlow = combine(
+            planRepository.getSlots(),
+            planRepository.getOverridesBetween(weekStart, day + 14),
+            userPreferences.planAnchor
+        ) { slots, overrides, anchor ->
+            if (anchor == null) emptyList()
+            else TrainingPlanner.planRange(weekStart, day + 14, anchor, slots, overrides)
+        }
+
         combine(
             tasksFlow,
             workoutSessionRepository.getAllSessions(),
             programRepository.getAllProgramsWithExercises(),
-            userPreferences.settings
-        ) { (routines, tasks, logs), sessions, programs, settings ->
+            userPreferences.settings,
+            planFlow
+        ) { (routines, tasks, logs), sessions, programs, settings, planned ->
             buildState(day, weekStart, routines, tasks, logs, sessions, programs, settings)
+                .withPlan(day, weekStart, planned, programs, sessions)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -116,6 +147,28 @@ class HomeViewModel(
             weeklySessionGoal = settings.weeklySessionGoal,
             suggestedWorkout = suggestWorkout(day, programs, completed),
             hasPrograms = programs.isNotEmpty()
+        )
+    }
+
+    private fun HomeUiState.withPlan(
+        day: Long,
+        weekStart: Long,
+        planned: List<PlannedWorkout>,
+        programs: List<ProgramWithExercises>,
+        sessions: List<WorkoutSession>
+    ): HomeUiState {
+        if (planned.isEmpty()) return this
+        val byId = programs.associateBy { it.program.id }
+        val completedByDay = sessions.filter { it.isCompleted && it.programId != null }
+            .groupBy({ PetraDates.epochDay(it.startTime) }, { it.programId!! })
+        fun map(p: PlannedWorkout): HomePlannedWorkout? {
+            val program = byId[p.programId]?.program ?: return null
+            return HomePlannedWorkout(p.epochDay, p.programId, program.name, program.category, p.timeMinutes, TrainingPlanner.isDone(p, completedByDay))
+        }
+        return copy(
+            todayPlanned = planned.filter { it.epochDay == day }.mapNotNull(::map),
+            nextPlanned = planned.firstOrNull { it.epochDay > day }?.let(::map),
+            plannedThisWeek = planned.count { it.epochDay in weekStart..(weekStart + 6) }
         )
     }
 
@@ -166,7 +219,8 @@ class HomeViewModel(
                     programRepository = app.programRepository,
                     workoutSessionRepository = app.workoutSessionRepository,
                     userPreferences = app.userPreferences,
-                    today = app.todayProvider.today
+                    today = app.todayProvider.today,
+                    planRepository = app.planRepository
                 ) as T
         }
     }

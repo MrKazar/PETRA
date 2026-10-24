@@ -1,5 +1,16 @@
 package com.example.porjectpetra.ui.workout
 
+import com.example.porjectpetra.ui.components.PetraPrimaryButton
+import com.example.porjectpetra.ui.components.PetraCard
+import com.example.porjectpetra.workout.WorkoutOverlayService
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.os.Build
+import android.content.pm.PackageManager
+import android.Manifest
 import androidx.compose.ui.graphics.Color
 import com.example.porjectpetra.data.catalog.EmptyExerciseCatalog
 import com.example.porjectpetra.data.catalog.ExerciseCatalog
@@ -91,6 +102,23 @@ fun ActiveWorkoutScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    // Séance visible hors de PETRA : notification + widget flottant (service de premier plan).
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        WorkoutOverlayService.start(context)
+    }
+    var canShowWidget by remember { mutableStateOf(WorkoutOverlayService.canDrawOverlays(context)) }
+    LifecycleResumeEffect(Unit) {
+        canShowWidget = WorkoutOverlayService.canDrawOverlays(context)
+        onPauseOrDispose { }
+    }
 
     LaunchedEffect(state.isSessionSaved, state.isSessionCancelled) {
         if (state.isSessionSaved || state.isSessionCancelled) {
@@ -194,6 +222,14 @@ fun ActiveWorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
+                if (!canShowWidget) {
+                    item {
+                        WidgetPermissionCard(onAllow = {
+                            context.startActivity(WorkoutOverlayService.overlaySettingsIntent(context))
+                        })
+                    }
+                }
+
                 // Metrics overview header card
                 item {
                     SessionOverviewHeader(
@@ -779,7 +815,7 @@ private fun CycleSetsContent(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth()
         )
-    } else {
+    } else if (exercise.muscleGroup != "Cardio") {
         Text(
             text = "Poids du corps",
             style = MaterialTheme.typography.bodySmall,
@@ -838,6 +874,7 @@ private fun CycleSetsContent(
             )
             Text(
                 text = when {
+                    exercise.muscleGroup == "Cardio" && !exercise.usesLoad -> "—"
                     !exercise.usesLoad -> "PdC"
                     load <= 0 -> "— kg"
                     else -> "${ExerciseCycle.formatKg(setItem.targetWeightKg)} kg"
@@ -846,7 +883,7 @@ private fun CycleSetsContent(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = ExerciseCycle.formatRest(setItem.restSeconds),
+                text = if (setItem.restSeconds > 0) ExerciseCycle.formatRest(setItem.restSeconds) else "—",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
@@ -932,5 +969,22 @@ fun RestTimerBannerPreview() {
             onAdd30s = {},
             onSkip = {}
         )
+    }
+}
+
+/** Invite à autoriser le widget flottant (affichage par-dessus les autres applications). */
+@Composable
+private fun WidgetPermissionCard(onAllow: () -> Unit) {
+    PetraCard {
+        Text("Widget de séance", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Pour suivre ta séance par-dessus YouTube ou ta musique (série en cours, repos, « Série faite »), " +
+                "autorise PETRA à s'afficher par-dessus les autres applis. La notification de séance fonctionne sans.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        PetraPrimaryButton(text = "Autoriser le widget", onClick = onAllow, modifier = Modifier.fillMaxWidth())
     }
 }

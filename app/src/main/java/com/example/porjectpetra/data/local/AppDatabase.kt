@@ -1,5 +1,8 @@
 package com.example.porjectpetra.data.local
 
+import com.example.porjectpetra.data.local.entity.PlanSlot
+import com.example.porjectpetra.data.local.entity.PlanOverride
+import com.example.porjectpetra.data.local.dao.PlanDao
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -32,9 +35,11 @@ import kotlinx.coroutines.launch
         BodyMetric::class,
         Routine::class,
         DailyTask::class,
-        TaskLog::class
+        TaskLog::class,
+        PlanSlot::class,
+        PlanOverride::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,6 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutSessionDao(): WorkoutSessionDao
     abstract fun bodyMetricDao(): BodyMetricDao
     abstract fun routineDao(): RoutineDao
+    abstract fun planDao(): PlanDao
 
     companion object {
         @Volatile
@@ -54,7 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitness_tracker_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     // Les montées de version conservent les données ; seul un retour en arrière efface la base.
                     .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                     .addCallback(AppDatabaseCallback(scope))
@@ -137,6 +143,28 @@ abstract class AppDatabase : RoomDatabase() {
                         arrayOf<Any>(link.name, oldName)
                     )
                 }
+            }
+        }
+
+        /** v5 : planning d'entraînement sur deux semaines (cycle A/B) et exceptions datées. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `plan_slots` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`weekIndex` INTEGER NOT NULL, `dayIndex` INTEGER NOT NULL, `programId` INTEGER NOT NULL, " +
+                        "`timeMinutes` INTEGER, " +
+                        "FOREIGN KEY(`programId`) REFERENCES `workout_programs`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_plan_slots_programId` ON `plan_slots` (`programId`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `plan_overrides` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`epochDay` INTEGER NOT NULL, `programId` INTEGER, `slotId` INTEGER, `timeMinutes` INTEGER, " +
+                        "FOREIGN KEY(`programId`) REFERENCES `workout_programs`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                        "FOREIGN KEY(`slotId`) REFERENCES `plan_slots`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_plan_overrides_epochDay` ON `plan_overrides` (`epochDay`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_plan_overrides_programId` ON `plan_overrides` (`programId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_plan_overrides_slotId` ON `plan_overrides` (`slotId`)")
             }
         }
 

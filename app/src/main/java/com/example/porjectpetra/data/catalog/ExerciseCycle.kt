@@ -6,7 +6,11 @@ import kotlin.math.roundToInt
 enum class SetPhase(val label: String) {
     WARMUP("Chauffe"),
     WORK("Travail"),
-    HYPERTROPHY("Hypertrophie");
+    HYPERTROPHY("Hypertrophie"),
+
+    // Cardio
+    EFFORT("Effort"),
+    COOLDOWN("Retour au calme");
 
     companion object {
         fun from(value: String?): SetPhase? = entries.firstOrNull { it.name == value }
@@ -50,6 +54,7 @@ object ExerciseCycle {
     const val LOAD_STEP_KG = 0.5
 
     fun build(exercise: CatalogExercise, workLoadKg: Double): List<CycleSet> {
+        if (exercise.isCardio) return buildCardio(exercise)
         val load = if (exercise.usesLoad) workLoadKg.coerceAtLeast(0.0) else 0.0
         val sets = mutableListOf<CycleSet>()
         fun add(phase: SetPhase, count: Int, p: PhasePrescription, ratio: Double, defaultRest: Int) {
@@ -71,6 +76,16 @@ object ExerciseCycle {
         return sets
     }
 
+    /** Cardio : chauffe, effort, retour au calme ; des durées, sans charge ni repos entre les phases. */
+    private fun buildCardio(exercise: CatalogExercise): List<CycleSet> =
+        listOf(
+            SetPhase.WARMUP to exercise.warmup,
+            SetPhase.EFFORT to exercise.work,
+            SetPhase.COOLDOWN to exercise.hypertrophy
+        ).mapIndexed { i, (phase, p) ->
+            CycleSet(setNumber = i + 1, phase = phase, indexInPhase = 1, reps = p.reps, isSeconds = true, weightKg = 0.0, restSeconds = 0)
+        }
+
     fun roundLoad(kg: Double): Double = (kg / LOAD_STEP_KG).roundToInt() * LOAD_STEP_KG
 
     fun formatKg(kg: Double): String =
@@ -82,6 +97,12 @@ object ExerciseCycle {
         else -> "${seconds / 60} min ${seconds % 60}"
     }
 
-    fun formatReps(reps: Int, isSeconds: Boolean, unilateral: Boolean): String =
-        (if (isSeconds) "$reps s" else "$reps rép.") + if (unilateral) " / côté" else ""
+    fun formatReps(reps: Int, isSeconds: Boolean, unilateral: Boolean): String {
+        val base = when {
+            !isSeconds -> "$reps rép."
+            reps >= 60 && reps % 60 == 0 -> "${reps / 60} min"
+            else -> "$reps s"
+        }
+        return base + if (unilateral) " / côté" else ""
+    }
 }

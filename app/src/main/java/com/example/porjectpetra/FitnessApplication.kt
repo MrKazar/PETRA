@@ -1,5 +1,7 @@
 package com.example.porjectpetra
 
+import com.example.porjectpetra.data.repository.PlanRepositoryImpl
+import com.example.porjectpetra.data.repository.PlanRepository
 import android.app.Application
 import com.example.porjectpetra.data.TodayProvider
 import com.example.porjectpetra.data.catalog.AssetExerciseCatalog
@@ -28,6 +30,7 @@ class FitnessApplication : Application() {
     val userPreferences: UserPreferencesRepository by lazy { DataStoreUserPreferencesRepository(this) }
     val todayProvider: TodayProvider by lazy { TodayProvider(this, applicationScope) }
     val exerciseCatalog: ExerciseCatalog by lazy { AssetExerciseCatalog(this) }
+    val planRepository: PlanRepository by lazy { PlanRepositoryImpl(database.planDao()) }
 
     override fun onCreate() {
         super.onCreate()
