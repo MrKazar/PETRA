@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Publie une version approuvée de PETRA : APK signé + release GitHub (canal de mise à jour de l'app).
 
