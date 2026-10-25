@@ -8,12 +8,15 @@ import com.example.porjectpetra.data.local.entity.ProgramWithExercises
 import com.example.porjectpetra.data.local.entity.SessionWithSets
 import com.example.porjectpetra.data.local.entity.WorkoutProgram
 import com.example.porjectpetra.data.local.entity.WorkoutSession
+import com.example.porjectpetra.data.model.FinisherPool
+import com.example.porjectpetra.data.preferences.FinisherPreferences
 import com.example.porjectpetra.data.repository.ProgramRepository
 import com.example.porjectpetra.data.repository.WorkoutSessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -23,6 +26,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -155,6 +159,16 @@ class FakeProgramRepositoryForWorkout : ProgramRepository {
     }
     override suspend fun deleteExercise(exercise: Exercise) {}
     override suspend fun deleteExerciseById(exerciseId: Long) {}
+}
+
+class FakeFinisherPreferences(
+    var enabled: Boolean = true,
+    val lastIds: MutableMap<FinisherPool, String> = mutableMapOf()
+) : FinisherPreferences {
+    override val finishersEnabled: Flow<Boolean> get() = flowOf(enabled)
+    override suspend fun setFinishersEnabled(enabled: Boolean) { this.enabled = enabled }
+    override suspend fun lastFinisherId(pool: FinisherPool): String? = lastIds[pool]
+    override suspend fun setLastFinisherId(pool: FinisherPool, finisherId: String) { lastIds[pool] = finisherId }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -317,5 +331,72 @@ class ActiveWorkoutViewModelTest {
     fun confirmCancelWorkout_cancelsSession() = runTest {
         viewModel.confirmCancelWorkout()
         assertTrue(viewModel.uiState.value.isSessionCancelled)
+    }
+
+    @Test
+    fun finish_finishersDisabled_opensSummaryDirectly() = runTest {
+        viewModel.openFinishSummaryDialog()
+        testDispatcher.scheduler.runCurrent() // pas advanceUntilIdle : le chronomètre de séance tourne sans fin
+
+        val state = viewModel.uiState.value
+        assertTrue(state.showFinishSummaryDialog)
+        assertFalse(state.showFinisherChoice)
+        assertNull(state.finisher)
+    }
+
+    @Test
+    fun finish_userChoosesPool_drawsFinisherOnce_andNotesItWhenDone() = runTest {
+        val prefs = FakeFinisherPreferences(lastIds = mutableMapOf(FinisherPool.ABDOS to "abdos"))
+        val vm = ActiveWorkoutViewModel(programRepository, workoutSessionRepository, finisherPreferences = prefs)
+        vm.updateSessionNotes("Bonne séance")
+
+        vm.openFinishSummaryDialog()
+        testDispatcher.scheduler.runCurrent() // pas advanceUntilIdle : le chronomètre de séance tourne sans fin
+        assertTrue(vm.uiState.value.showFinisherChoice)
+        assertFalse(vm.uiState.value.showFinishSummaryDialog)
+
+        vm.chooseFinisherPool(FinisherPool.ABDOS)
+        testDispatcher.scheduler.runCurrent() // pas advanceUntilIdle : le chronomètre de séance tourne sans fin
+        val drawn = vm.uiState.value.finisher
+        assertNotNull(drawn)
+        assertTrue(vm.uiState.value.showFinisherDialog)
+        assertFalse(vm.uiState.value.showFinisherChoice)
+        assertEquals(FinisherPool.ABDOS, drawn!!.pool)
+        assertTrue(drawn.id != "abdos")
+        assertEquals(drawn.id, prefs.lastIds[FinisherPool.ABDOS])
+
+        // Fermé puis rouvert : même finisher, pas de nouveau tirage.
+        vm.dismissFinisherDialog()
+        vm.openFinishSummaryDialog()
+        testDispatcher.scheduler.runCurrent() // pas advanceUntilIdle : le chronomètre de séance tourne sans fin
+        assertEquals(drawn, vm.uiState.value.finisher)
+        assertTrue(vm.uiState.value.showFinisherDialog)
+
+        vm.completeFinisher()
+        val state = vm.uiState.value
+        assertEquals("Bonne séance\nFinisher : ${drawn.name}", state.notes)
+        assertTrue(state.showFinishSummaryDialog)
+        assertFalse(state.showFinisherDialog)
+    }
+
+    @Test
+    fun finish_skipFinisher_keepsNotes_andGoesToSummary() = runTest {
+        val vm = ActiveWorkoutViewModel(programRepository, workoutSessionRepository, finisherPreferences = FakeFinisherPreferences())
+
+        vm.openFinishSummaryDialog()
+        testDispatcher.scheduler.runCurrent() // pas advanceUntilIdle : le chronomètre de séance tourne sans fin
+        vm.skipFinisher()
+
+        val state = vm.uiState.value
+        assertEquals("", state.notes)
+        assertTrue(state.showFinishSummaryDialog)
+        assertFalse(state.showFinisherChoice)
+        assertTrue(state.finisherHandled)
+
+        // Récapitulatif fermé puis « Terminer » à nouveau : plus de finisher proposé.
+        vm.dismissFinishSummaryDialog()
+        vm.openFinishSummaryDialog()
+        assertTrue(vm.uiState.value.showFinishSummaryDialog)
+        assertFalse(vm.uiState.value.showFinisherChoice)
     }
 }

@@ -36,6 +36,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,6 +59,8 @@ import com.example.porjectpetra.ui.components.ComingSoonNote
 import com.example.porjectpetra.ui.components.PetraCard
 import com.example.porjectpetra.ui.components.PetraScreenHeader
 import com.example.porjectpetra.ui.components.SectionHeader
+import com.example.porjectpetra.ui.theme.PetraOlive
+import com.example.porjectpetra.ui.theme.PetraSurfaceAlt
 import com.example.porjectpetra.ui.theme.PetraTextMuted
 
 private enum class ClearTarget { TASKS, WORKOUTS }
@@ -141,6 +145,24 @@ fun ProfileScreen(viewModel: ProfileViewModel, modifier: Modifier = Modifier, up
                     )
                     Spacer(Modifier.height(8.dp))
                     ComingSoonNote("objectifs personnels détaillés (poids, performances).")
+                }
+
+                PetraCard {
+                    SectionHeader("Séances")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Finishers en fin de séance", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = current.finishersEnabled,
+                            onCheckedChange = viewModel::setFinishersEnabled,
+                            colors = SwitchDefaults.colors(checkedTrackColor = PetraOlive, uncheckedTrackColor = PetraSurfaceAlt)
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "À « Terminer », propose un finisher (un tour à fond) du type de ton choix, ou passe.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PetraTextMuted
+                    )
                 }
             }
 

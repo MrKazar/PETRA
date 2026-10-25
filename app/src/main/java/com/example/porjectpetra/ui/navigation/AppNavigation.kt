@@ -191,7 +191,8 @@ fun AppNavigation(
                             programRepository = app.programRepository,
                             workoutSessionRepository = app.workoutSessionRepository,
                             catalog = app.exerciseCatalog,
-                            programId = key.programId
+                            programId = key.programId,
+                            finisherPreferences = app.userPreferences
                         )
                     )
                     // Le geste « retour » demande confirmation au lieu de perdre la séance en cours.

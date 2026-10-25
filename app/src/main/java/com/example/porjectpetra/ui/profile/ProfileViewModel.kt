@@ -35,6 +35,10 @@ class ProfileViewModel(
         viewModelScope.launch { preferences.setWeeklySessionGoal(goal) }
     }
 
+    fun setFinishersEnabled(enabled: Boolean) {
+        viewModelScope.launch { preferences.setFinishersEnabled(enabled) }
+    }
+
     fun clearTaskHistory() {
         viewModelScope.launch {
             routineRepository.clearTaskHistory()

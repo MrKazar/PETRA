@@ -91,6 +91,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.porjectpetra.ui.theme.PetraTheme
+import com.example.porjectpetra.data.model.Finisher
+import com.example.porjectpetra.data.model.FinisherPool
+import com.example.porjectpetra.data.model.availableFinisherPools
+import com.example.porjectpetra.ui.components.SectionHeader
+import com.example.porjectpetra.ui.theme.PetraBorder
+import com.example.porjectpetra.ui.theme.PetraSurface
+import com.example.porjectpetra.ui.theme.PetraText
+import com.example.porjectpetra.ui.theme.PetraTextMuted
+import androidx.compose.foundation.BorderStroke
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -289,6 +298,24 @@ fun ActiveWorkoutScreen(
         }
 
         // Dialogs
+        if (state.showFinisherChoice) {
+            FinisherChoiceDialog(
+                onChoose = { viewModel.chooseFinisherPool(it) },
+                onSkip = { viewModel.skipFinisher() },
+                onDismiss = { viewModel.dismissFinisherDialog() }
+            )
+        }
+
+        val finisher = state.finisher
+        if (state.showFinisherDialog && finisher != null) {
+            FinisherDialog(
+                finisher = finisher,
+                onDone = { viewModel.completeFinisher() },
+                onSkip = { viewModel.skipFinisher() },
+                onDismiss = { viewModel.dismissFinisherDialog() }
+            )
+        }
+
         if (state.showFinishSummaryDialog) {
             FinishWorkoutSummaryDialog(
                 elapsedTime = state.formattedElapsedTime,
@@ -716,6 +743,104 @@ fun ExerciseWorkoutCard(
 
         }
     }
+}
+
+/** Choix du type de finisher en fin de séance (optionnel). */
+@Composable
+fun FinisherChoiceDialog(
+    onChoose: (FinisherPool) -> Unit,
+    onSkip: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = PetraSurface,
+        title = {
+            Text(
+                text = "Un finisher ?",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = PetraText
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Choisis un type : un finisher est tiré au hasard.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PetraTextMuted
+                )
+                availableFinisherPools.forEach { pool ->
+                    OutlinedButton(onClick = { onChoose(pool) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(pool.label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSkip) {
+                Text("Passer")
+            }
+        }
+    )
+}
+
+/** Finisher de fin de séance : un seul tour, à fond, avant le récapitulatif. */
+@Composable
+fun FinisherDialog(
+    finisher: Finisher,
+    onDone: () -> Unit,
+    onSkip: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = PetraSurface,
+        title = {
+            Text(
+                text = "Finisher · ${finisher.name}",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = PetraText
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader("Un seul tour, à fond")
+                if (finisher.subtitle.isNotBlank()) {
+                    Text(finisher.subtitle, style = MaterialTheme.typography.bodyMedium, color = PetraTextMuted)
+                }
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.outlinedCardColors(containerColor = PetraSurface),
+                    border = BorderStroke(1.dp, PetraBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        finisher.steps.forEachIndexed { index, step ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${index + 1}.",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = PetraTextMuted,
+                                    modifier = Modifier.width(24.dp)
+                                )
+                                Text(step, style = MaterialTheme.typography.bodyMedium, color = PetraText)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            PetraPrimaryButton(text = "Terminé", onClick = onDone, icon = Icons.Default.Check)
+        },
+        dismissButton = {
+            TextButton(onClick = onSkip) {
+                Text("Passer")
+            }
+        }
+    )
 }
 
 @Composable

@@ -15,6 +15,11 @@ import com.example.porjectpetra.data.catalog.SetPhase
 import com.example.porjectpetra.data.local.entity.Exercise
 import com.example.porjectpetra.data.local.entity.LoggedSet
 import com.example.porjectpetra.data.local.entity.WorkoutSession
+import com.example.porjectpetra.data.model.Finisher
+import com.example.porjectpetra.data.model.FinisherPool
+import com.example.porjectpetra.data.model.pickFinisher
+import com.example.porjectpetra.data.preferences.DisabledFinisherPreferences
+import com.example.porjectpetra.data.preferences.FinisherPreferences
 import com.example.porjectpetra.data.repository.ProgramRepository
 import com.example.porjectpetra.data.repository.WorkoutSessionRepository
 import kotlinx.coroutines.Job
@@ -22,10 +27,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.random.Random
 
 data class ActiveSetUiState(
     val tempId: String = UUID.randomUUID().toString(),
@@ -85,6 +92,13 @@ data class ActiveWorkoutUiState(
     val showFinishSummaryDialog: Boolean = false,
     val showCancelDialog: Boolean = false,
     val showAddExerciseDialog: Boolean = false,
+    /** Choix du type de finisher, proposé à « Terminer » quand les finishers sont activés. */
+    val showFinisherChoice: Boolean = false,
+    /** Finisher tiré à la fin de la séance (une seule fois). */
+    val finisher: Finisher? = null,
+    val showFinisherDialog: Boolean = false,
+    /** Finisher fait, passé ou sans objet : « Terminer » mène directement au récapitulatif. */
+    val finisherHandled: Boolean = false,
     val isSessionSaved: Boolean = false,
     val isSessionCancelled: Boolean = false,
     val userMessage: String? = null,
@@ -129,7 +143,9 @@ data class ActiveWorkoutUiState(
 class ActiveWorkoutViewModel(
     private val programRepository: ProgramRepository,
     private val workoutSessionRepository: WorkoutSessionRepository,
-    private val catalog: ExerciseCatalog = EmptyExerciseCatalog
+    private val catalog: ExerciseCatalog = EmptyExerciseCatalog,
+    private val finisherPreferences: FinisherPreferences = DisabledFinisherPreferences,
+    private val random: Random = Random.Default
 ) : ViewModel() {
 
     /** Exercices du programme chargé, pour mémoriser la charge de travail à la fin de la séance. */
@@ -452,8 +468,61 @@ class ActiveWorkoutViewModel(
     }
 
     // Finish & Save Session
+    /** « Terminer » : d'abord le finisher (optionnel, type choisi par l'utilisateur), puis le récapitulatif. */
     fun openFinishSummaryDialog() {
-        _uiState.update { it.copy(showFinishSummaryDialog = true) }
+        val state = _uiState.value
+        if (state.finisherHandled) {
+            _uiState.update { it.copy(showFinishSummaryDialog = true) }
+            return
+        }
+        if (state.finisher != null) {
+            _uiState.update { it.copy(showFinisherDialog = true) }
+            return
+        }
+        viewModelScope.launch {
+            val enabled = finisherPreferences.finishersEnabled.first()
+            _uiState.update {
+                if (enabled) it.copy(showFinisherChoice = true)
+                else it.copy(finisherHandled = true, showFinishSummaryDialog = true)
+            }
+        }
+    }
+
+    /** Tire un finisher du type choisi (jamais le dernier tiré de ce type) et le retient. */
+    fun chooseFinisherPool(pool: FinisherPool) {
+        viewModelScope.launch {
+            val finisher = pickFinisher(pool, finisherPreferences.lastFinisherId(pool), random)
+            if (finisher == null) {
+                skipFinisher()
+                return@launch
+            }
+            finisherPreferences.setLastFinisherId(pool, finisher.id)
+            _uiState.update { it.copy(finisher = finisher, showFinisherChoice = false, showFinisherDialog = true) }
+        }
+    }
+
+    /** Finisher fait : noté dans les remarques de la séance, puis récapitulatif. */
+    fun completeFinisher() {
+        _uiState.update { state ->
+            val line = state.finisher?.let { "Finisher : ${it.name}" }
+            state.copy(
+                notes = listOfNotNull(state.notes.ifBlank { null }, line).joinToString("\n"),
+                showFinisherDialog = false,
+                finisherHandled = true,
+                showFinishSummaryDialog = true
+            )
+        }
+    }
+
+    fun skipFinisher() {
+        _uiState.update {
+            it.copy(showFinisherChoice = false, showFinisherDialog = false, finisherHandled = true, showFinishSummaryDialog = true)
+        }
+    }
+
+    /** Ferme le finisher sans le valider : le même revient au prochain « Terminer ». */
+    fun dismissFinisherDialog() {
+        _uiState.update { it.copy(showFinisherChoice = false, showFinisherDialog = false) }
     }
 
     fun dismissFinishSummaryDialog() {
@@ -548,11 +617,12 @@ class ActiveWorkoutViewModel(
             programRepository: ProgramRepository,
             workoutSessionRepository: WorkoutSessionRepository,
             catalog: ExerciseCatalog = EmptyExerciseCatalog,
-            programId: Long? = null
+            programId: Long? = null,
+            finisherPreferences: FinisherPreferences = DisabledFinisherPreferences
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val vm = ActiveWorkoutViewModel(programRepository, workoutSessionRepository, catalog)
+                val vm = ActiveWorkoutViewModel(programRepository, workoutSessionRepository, catalog, finisherPreferences)
                 if (programId != null) {
                     vm.startSessionForProgram(programId)
                 }
